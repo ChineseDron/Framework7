@@ -45,10 +45,13 @@ app.initFastClicks = function () {
         return true;
     }
     function addActive() {
+        if (!activableElement) return;
         activableElement.addClass('active-state');
     }
     function removeActive(el) {
+        if (!activableElement) return;
         activableElement.removeClass('active-state');
+        activableElement = null;
     }
     function isFormElement(el) {
         var nodes = ('input select textarea label').split(' ');
@@ -219,12 +222,29 @@ app.initFastClicks = function () {
         }
     }
 
+    // Send Click
+    function sendClick(e) {
+        var touch = e.changedTouches[0];
+        var evt = document.createEvent('MouseEvents');
+        var eventType = 'click';
+        if (app.device.android && targetElement.nodeName.toLowerCase() === 'select') {
+            eventType = 'mousedown';
+        }
+        evt.initMouseEvent(eventType, true, true, window, 1, touch.screenX, touch.screenY, touch.clientX, touch.clientY, false, false, false, false, 0, null);
+        evt.forwardedTouchEvent = true;
+        targetElement.dispatchEvent(evt);
+    }
+
     // Touch Handlers
     function handleTouchStart(e) {
         isMoved = false;
         tapHoldFired = false;
         if (e.targetTouches.length > 1) {
+            if (activableElement) removeActive();
             return true;
+        }
+        if (e.touches.length > 1 && activableElement) {
+            removeActive();
         }
         if (app.params.tapHold) {
             if (tapHoldTimeout) clearTimeout(tapHoldTimeout);
@@ -377,7 +397,17 @@ app.initFastClicks = function () {
 
         // Trigger focus when required
         if (targetNeedsFocus(targetElement)) {
-            targetElement.focus();
+            if (app.device.ios && app.device.webView) {
+                if ((event.timeStamp - touchStartTime) > 159) {
+                    targetElement = null;
+                    return false;
+                }
+                targetElement.focus();
+                return false;
+            }
+            else {
+                targetElement.focus();
+            }
         }
 
         // Blur active elements
@@ -387,15 +417,7 @@ app.initFastClicks = function () {
 
         // Send click
         e.preventDefault();
-        var touch = e.changedTouches[0];
-        var evt = document.createEvent('MouseEvents');
-        var eventType = 'click';
-        if (app.device.android && targetElement.nodeName.toLowerCase() === 'select') {
-            eventType = 'mousedown';
-        }
-        evt.initMouseEvent(eventType, true, true, window, 1, touch.screenX, touch.screenY, touch.clientX, touch.clientY, false, false, false, false, 0, null);
-        evt.forwardedTouchEvent = true;
-        targetElement.dispatchEvent(evt);
+        sendClick(e);
         return false;
     }
     function handleTouchCancel(e) {

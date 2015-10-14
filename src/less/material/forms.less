@@ -53,7 +53,6 @@
 
     .item-input {
         width: 100%;
-        -webkit-box-flex:1;
         -ms-flex:1;
         .flex-shrink(1);
         font-size: 0;
@@ -204,6 +203,8 @@ textarea.resizable {
     padding: 0 8px;
     position: relative;
     overflow: hidden;
+    outline: 0;
+    border: none;
     .transition(300ms);
     .translate3d(0,0,0);
     input[type="submit"]&, input[type="button"]&{
