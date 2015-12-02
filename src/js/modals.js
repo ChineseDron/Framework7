@@ -357,6 +357,33 @@ app.popover = function (modal, target, removeOnClose) {
             if (modalPosition === 'bottom') {
                 modal.addClass('popover-on-bottom');
             }
+            if (target.hasClass('floating-button-to-popover') && !modal.hasClass('modal-in')) {
+                modal.addClass('popover-floating-button');
+                var diffX = (modalLeft + modalWidth / 2) - (targetOffset.left + targetWidth / 2),
+                    diffY = (modalTop + modalHeight / 2) - (targetOffset.top + targetHeight / 2);
+                target
+                    .addClass('floating-button-to-popover-in')
+                    .transform('translate3d(' + diffX + 'px, ' + diffY + 'px,0)')
+                    .transitionEnd(function (e) {
+                        if (!target.hasClass('floating-button-to-popover-in')) return;
+                        target
+                            .addClass('floating-button-to-popover-scale')
+                            .transform('translate3d(' + diffX + 'px, ' + diffY + 'px,0) scale(' + (modalWidth/targetWidth) + ', ' + (modalHeight/targetHeight) + ')');
+                    });
+
+                modal.once('close', function () {
+                    target
+                        .removeClass('floating-button-to-popover-in floating-button-to-popover-scale')
+                        .addClass('floating-button-to-popover-out')
+                        .transform('')
+                        .transitionEnd(function (e) {
+                            target.removeClass('floating-button-to-popover-out');
+                        });
+                });
+                modal.once('closed', function () {
+                    modal.removeClass('popover-floating-button');
+                });
+            }
 
         }
         else {
@@ -419,9 +446,11 @@ app.popover = function (modal, target, removeOnClose) {
         // Apply Styles
         modal.css({top: modalTop + 'px', left: modalLeft + 'px'});
     }
+
     sizePopover();
 
     $(window).on('resize', sizePopover);
+
     modal.on('close', function () {
         $(window).off('resize', sizePopover);
     });
@@ -444,7 +473,7 @@ app.popup = function (modal, removeOnClose) {
     modal = $(modal);
     if (modal.length === 0) return false;
     modal.show();
-    
+
     app.openModal(modal);
     return modal[0];
 };
@@ -569,7 +598,14 @@ app.closeModal = function (modal) {
 
     var removeOnClose = modal.hasClass('remove-on-close');
 
-    var overlay = isPopup ? $('.popup-overlay') : (isPickerModal && app.params.material ? $('.picker-modal-overlay') : $('.modal-overlay'));
+    var overlay;
+    
+    if (isPopup) overlay = $('.popup-overlay');
+    else {
+        if (isPickerModal && app.params.material) overlay = $('.picker-modal-overlay');
+        else if (!isPickerModal) overlay = $('.modal-overlay');
+    }
+
     if (isPopup){
         if (modal.length === $('.popup.modal-in').length) {
             overlay.removeClass('modal-overlay-visible');
@@ -590,7 +626,10 @@ app.closeModal = function (modal) {
     if (!(isPopover && !app.params.material)) {
         modal.removeClass('modal-in').addClass('modal-out').transitionEnd(function (e) {
             if (modal.hasClass('modal-out')) modal.trigger('closed');
-            else modal.trigger('opened');
+            else {
+                modal.trigger('opened');
+                if (isPopover) return;
+            }
 
             if (isPickerModal) {
                 $('body').removeClass('picker-modal-closing');
